@@ -1,3 +1,4 @@
+/* eslint-disable no-param-reassign */
 const got = require('got');
 const crypto = require('crypto');
 const qs = require('qs');
@@ -48,15 +49,13 @@ const defaults = {
 // Create a signature for a request
 const getMessageSignature = (path, request, secret, nonce) => {
   const message = qs.stringify(request);
-  const secret_buffer = new Buffer(secret, 'base64');
-  const hash = new crypto.createHash('sha256');
-  const hmac = new crypto.createHmac('sha512', secret_buffer);
-  const hash_digest = hash.update(nonce + message).digest('binary');
-  const hmac_digest = hmac
-    .update(path + hash_digest, 'binary')
-    .digest('base64');
+  const secretBuffer = Buffer.from(secret, 'base64');
+  const hash = crypto.createHash('sha256');
+  const hmac = crypto.createHmac('sha512', secretBuffer);
+  const hashDigest = hash.update(nonce + message).digest('binary');
+  const hmacDigest = hmac.update(path + hashDigest, 'binary').digest('base64');
 
-  return hmac_digest;
+  return hmacDigest;
 };
 
 // Send an API request
@@ -125,9 +124,8 @@ class KrakenClient {
       return this.publicMethod(method, params, callback);
     } else if (methods.private.includes(method)) {
       return this.privateMethod(method, params, callback);
-    } else {
-      throw new Error(method + ' is not a valid API method.');
     }
+    throw new Error(`${method} is not a valid API method.`);
   }
 
   /**
@@ -146,7 +144,7 @@ class KrakenClient {
       params = {};
     }
 
-    const path = '/' + this.config.version + '/public/' + method;
+    const path = `/${this.config.version}/public/${method}`;
     const url = this.config.url + path;
     const response = rawRequest(url, {}, params, this.config.timeout);
 
@@ -167,15 +165,15 @@ class KrakenClient {
    * @return {Object}            The request object
    */
   privateMethod(method, params, callback) {
-    params = params || {};
-
+	params = params || {};
+	
     // Default params to empty object
     if (typeof params === 'function') {
       callback = params;
       params = {};
     }
 
-    const path = '/' + this.config.version + '/private/' + method;
+    const path = `/${this.config.version}/private/${method}`;
     const url = this.config.url + path;
 
     if (!params.nonce) {
